@@ -1,13 +1,14 @@
-import feedparser, requests
+import feedparser
+import requests
 from feedparser.api import FeedParserDict
-from scripts.bots.base import Crawler
+
+from scripts.bots import BaseCrawler
 
 
-class G1Crawler(Crawler):
+class G1Crawler(BaseCrawler):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.rss_url = 'https://g1.globo.com/rss/g1/'
-
+        self.rss_url = "https://g1.globo.com/rss/g1/"
 
     def crawl(self) -> None:
         feed = feedparser.parse(self.rss_url)
@@ -18,9 +19,9 @@ class G1Crawler(Crawler):
         token = self._get_token()
 
         for entry in feed.entries:
-            url: str = entry.link   # type: ignore
-            if self._is_repetida(url):   # type: ignore
-                self.logger.error(f'NOTÍCIA JÁ INDEXADA: {url}.')
+            url: str = entry.link  # type: ignore
+            if self._is_repetida(url):  # type: ignore
+                self.logger.error(f"NOTÍCIA JÁ INDEXADA: {url}.")
                 continue
 
             self._indexa_noticia(url)
@@ -29,27 +30,25 @@ class G1Crawler(Crawler):
 
             result = requests.post(
                 f"{self.api_url}/noticia/",
-                json = noticia, headers = {
-                    "Authorization": f"Token {token}"
-                }
+                json=noticia,
+                headers={"Authorization": f"Token {token}"},
             )
 
             if result.status_code != 201:
-                self.logger.error(f"STATUS CODE {result.status_code} PARA {entry.link}.")
+                self.logger.error(
+                    f"STATUS CODE {result.status_code} PARA {entry.link}."
+                )
 
-
-    def _get_imagem(self, source: str | FeedParserDict) -> str:     # type: ignore
+    def _get_imagem(self, source: str | FeedParserDict) -> str | None:  # type: ignore
         """Recebe uma notícia e retorna a URL para a imagem de capa da notícia."""
-        imagem = source.get("media_content", "")    # type: ignore
+        imagem = source.get("media_content", "")  # type: ignore
         if imagem:
-            return imagem[0].get("url")     # type: ignore
-
+            return imagem[0].get("url")  # type: ignore
 
     def _montar_noticia(self, noticia: FeedParserDict):
         return {
             "titulo": noticia.title,
-            "sumario": noticia.get("subtitle", ''),
+            "sumario": noticia.get("subtitle", ""),
             "link": noticia.link,
-            "disponivel": True,
             "imagem": self._get_imagem(noticia),
         }

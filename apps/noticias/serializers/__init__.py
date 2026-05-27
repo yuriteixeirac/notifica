@@ -1,1 +1,0 @@
-from apps.noticias.serializers.noticia_serializer import NoticiaSerializer

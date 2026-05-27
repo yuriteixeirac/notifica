@@ -1,15 +1,15 @@
-import feedparser, requests
-from feedparser.api import FeedParserDict
+import feedparser
+import requests
 from bs4 import BeautifulSoup
-from newspaper import Article
-from scripts.bots.base import Crawler
+from feedparser.api import FeedParserDict
+
+from scripts.bots import BaseCrawler
 
 
-class CNNCrawler(Crawler):
+class CNNCrawler(BaseCrawler):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.rss_url = 'https://admin.cnnbrasil.com.br/feed/'
-
+        self.rss_url = "https://admin.cnnbrasil.com.br/feed/"
 
     def crawl(self) -> None:
         feed = feedparser.parse(self.rss_url)
@@ -20,9 +20,9 @@ class CNNCrawler(Crawler):
         token = self._get_token()
 
         for entry in feed.entries:
-            url: str = entry.link   # type: ignore
-            if self._is_repetida(url):   # type: ignore
-                self.logger.error(f'NOTÍCIA JÁ INDEXADA: {url}.')
+            url: str = entry.link  # type: ignore
+            if self._is_repetida(url):  # type: ignore
+                self.logger.error(f"NOTÍCIA JÁ INDEXADA: {url}.")
                 continue
 
             self._indexa_noticia(url)
@@ -31,30 +31,30 @@ class CNNCrawler(Crawler):
 
             result = requests.post(
                 f"{self.api_url}/noticia/",
-                json = noticia, headers = {
-                    "Authorization": f"Token {token}"
-                }
+                json=noticia,
+                headers={"Authorization": f"Token {token}"},
             )
 
             if result.status_code != 201:
-                self.logger.error(f"STATUS CODE {result.status_code} PARA {entry.link}.")
+                self.logger.error(
+                    f"STATUS CODE {result.status_code} PARA {entry.link}."
+                )
 
-
-    def _get_imagem(self, source: str | FeedParserDict) -> str:
+    def _get_imagem(self, source: str | FeedParserDict) -> str | None:
         """Recebe uma notícia e retorna a URL para a imagem de capa da notícia."""
-        html = requests.get(source)     # type: ignore
-        soup = BeautifulSoup(html.text, 'html.parser')
+        html = requests.get(source)  # type: ignore
+        soup = BeautifulSoup(html.text, "html.parser")
 
-        imagem = soup.select('img.flex.size-full.object-cover')[2]
-        return imagem.get("src")    # type: ignore
+        imagem = soup.select("img.flex.size-full.object-cover")[2]
 
+        if not imagem:
+            return
+        return imagem.attrs.get("src", None)  # type: ignore
 
     def _montar_noticia(self, noticia: FeedParserDict):
         return {
             "titulo": noticia.title,
-            "sumario": noticia.summary + '.',  # type: ignore
+            "sumario": noticia.summary + ".",  # type: ignore
             "link": noticia.link,
-            "imagem": self._get_imagem(news.link),    # type: ignore
-            "disponivel": True,
+            "imagem": self._get_imagem(noticia.link),  # type: ignore
         }
-    

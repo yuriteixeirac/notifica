@@ -1,15 +1,13 @@
 from django.db import models
+
 from apps.accounts.models import Usuario
 
 
 class Noticia(models.Model):
     titulo = models.CharField(max_length=255)
-    sumario = models.CharField(max_length=512)
-
+    corpo = models.CharField(max_length=512)
     link = models.URLField(unique=True)
     imagem = models.URLField()
-
     publicado_em = models.DateField(auto_now_add=True)
-    disponivel = models.BooleanField(default=True)
-
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    disponivel = models.BooleanField(default=True)
