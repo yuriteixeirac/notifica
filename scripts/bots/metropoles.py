@@ -42,7 +42,7 @@ class MetropolesCrawler(BaseCrawler):
     def _montar_noticia(self, noticia: FeedParserDict) -> dict[str, any]:  # type: ignore
         return {
             "titulo": noticia.title,
-            "sumario": noticia.summary + ".",  # type: ignore
+            "corpo": noticia.summary + ".",  # type: ignore
             "link": noticia.link,
             "imagem": self._get_imagem(noticia.link),  # type: ignore
         }

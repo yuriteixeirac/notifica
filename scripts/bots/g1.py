@@ -48,7 +48,7 @@ class G1Crawler(BaseCrawler):
     def _montar_noticia(self, noticia: FeedParserDict):
         return {
             "titulo": noticia.title,
-            "sumario": noticia.get("subtitle", ""),
+            "corpo": noticia.get("subtitle", ""),
             "link": noticia.link,
             "imagem": self._get_imagem(noticia),
         }

@@ -65,7 +65,7 @@ class UOLCrawler(BaseCrawler):
     def _montar_noticia(self, noticia: FeedParserDict) -> dict:
         return {
             "titulo": self._get_title(noticia.link),  # type: ignore
-            "sumario": noticia.summary,
+            "corpo": noticia.summary,
             "link": noticia.link,
             "imagem": self._get_imagem(noticia.link),  # type: ignore
             "disponivel": True,

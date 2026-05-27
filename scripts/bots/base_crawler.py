@@ -5,12 +5,11 @@ import requests
 from feedparser.api import FeedParserDict
 from newspaper import Article
 
-from scripts.logger import logger
 from scripts.services.vector_database import VectorDatabase
 
 
 class BaseCrawler(ABC):
-    def __init__(self, vector_db: VectorDatabase) -> None:
+    def __init__(self, logger, vector_db: VectorDatabase) -> None:
         self.api_url = os.getenv("API_URL")
         self.vector_db = vector_db
         self.content: str | None = None
