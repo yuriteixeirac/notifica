@@ -3,6 +3,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from apps.postagens.services import validar_postagem
@@ -15,6 +16,7 @@ class PostagemViewSet(ViewSet):
 
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
 
 
     @extend_schema(
@@ -47,7 +49,7 @@ class PostagemViewSet(ViewSet):
 
     @extend_schema(
         summary="Rota de criação de postagem.",
-        description="Recebe uma postagem e registra-a no sistema.",
+        description="Recebe uma postagem e registra-a no sistema. Aceita cor_fundo hexadecimal ou imagem de fundo via URL ou arquivo.",
         request=PostagemInputSerializer,
         responses={400: None, 201: PostagemOutputSerializer}
     )
@@ -70,7 +72,7 @@ class PostagemViewSet(ViewSet):
 
     @extend_schema(
         summary="Rota de atualização de postagem.",
-        description="Recebe uma postagem e atualiza-a se pertencer ao usuário autenticado.",
+        description="Recebe uma postagem e atualiza-a se pertencer ao usuário autenticado. Aceita cor_fundo hexadecimal ou imagem de fundo via URL ou arquivo.",
         request=PostagemInputSerializer,
         parameters=[OpenApiParameter("id", OpenApiTypes.INT, OpenApiParameter.PATH)],
         responses={400: None, 404: None, 200: PostagemOutputSerializer}

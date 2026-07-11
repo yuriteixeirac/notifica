@@ -1,3 +1,7 @@
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -47,6 +51,113 @@ class PostagemViewSetTests(TestCase):
         self.assertEqual(self.postagem.titulo, 'Titulo atualizado')
         self.assertEqual(self.postagem.corpo, 'Corpo atualizado')
         self.assertFalse(self.postagem.disponivel)
+
+    def test_update_atualiza_cor_fundo_hexadecimal(self):
+        request = self.factory.put(f'/api/postagem/{self.postagem.pk}/', {
+            'titulo': 'Titulo atualizado',
+            'corpo': 'Corpo atualizado',
+            'cor_fundo': '#1A2b3C',
+        }, format='json')
+        force_authenticate(request, user=self.usuario)
+
+        response = PostagemViewSet.as_view({'put': 'update'})(
+            request,
+            pk=self.postagem.pk,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.postagem.refresh_from_db()
+        self.assertEqual(self.postagem.cor_fundo, '#1A2b3C')
+        self.assertIsNone(self.postagem.imagem)
+        self.assertEqual(response.data['cor_fundo'], '#1A2b3C')
+
+    def test_update_atualiza_imagem_por_url(self):
+        self.postagem.cor_fundo = '#FFFFFF'
+        self.postagem.save()
+
+        request = self.factory.put(f'/api/postagem/{self.postagem.pk}/', {
+            'titulo': 'Titulo atualizado',
+            'corpo': 'Corpo atualizado',
+            'imagem': 'https://example.com/fundo.png',
+        }, format='json')
+        force_authenticate(request, user=self.usuario)
+
+        response = PostagemViewSet.as_view({'put': 'update'})(
+            request,
+            pk=self.postagem.pk,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.postagem.refresh_from_db()
+        self.assertIsNone(self.postagem.cor_fundo)
+        self.assertEqual(self.postagem.imagem, 'https://example.com/fundo.png')
+        self.assertEqual(response.data['imagem'], 'https://example.com/fundo.png')
+
+    @patch('apps.postagens.serializers.postagem_input_serializer.upload_image')
+    def test_update_atualiza_imagem_por_arquivo(self, upload_image_mock):
+        upload_image_mock.return_value = SimpleNamespace(
+            url='https://example.com/upload/fundo.png'
+        )
+        arquivo = SimpleUploadedFile(
+            'fundo.png',
+            b'conteudo-da-imagem',
+            content_type='image/png',
+        )
+        request = self.factory.put(f'/api/postagem/{self.postagem.pk}/', {
+            'titulo': 'Titulo atualizado',
+            'corpo': 'Corpo atualizado',
+            'imagem': arquivo,
+        }, format='multipart')
+        force_authenticate(request, user=self.usuario)
+
+        response = PostagemViewSet.as_view({'put': 'update'})(
+            request,
+            pk=self.postagem.pk,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.postagem.refresh_from_db()
+        self.assertEqual(
+            self.postagem.imagem,
+            'https://example.com/upload/fundo.png',
+        )
+        upload_image_mock.assert_called_once()
+
+    def test_update_rejeita_cor_fundo_invalida(self):
+        request = self.factory.put(f'/api/postagem/{self.postagem.pk}/', {
+            'titulo': 'Titulo atualizado',
+            'corpo': 'Corpo atualizado',
+            'cor_fundo': 'azul',
+        }, format='json')
+        force_authenticate(request, user=self.usuario)
+
+        response = PostagemViewSet.as_view({'put': 'update'})(
+            request,
+            pk=self.postagem.pk,
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.postagem.refresh_from_db()
+        self.assertIsNone(self.postagem.cor_fundo)
+
+    def test_update_rejeita_cor_fundo_e_imagem_juntas(self):
+        request = self.factory.put(f'/api/postagem/{self.postagem.pk}/', {
+            'titulo': 'Titulo atualizado',
+            'corpo': 'Corpo atualizado',
+            'cor_fundo': '#FFFFFF',
+            'imagem': 'https://example.com/fundo.png',
+        }, format='json')
+        force_authenticate(request, user=self.usuario)
+
+        response = PostagemViewSet.as_view({'put': 'update'})(
+            request,
+            pk=self.postagem.pk,
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.postagem.refresh_from_db()
+        self.assertIsNone(self.postagem.cor_fundo)
+        self.assertIsNone(self.postagem.imagem)
 
     def test_update_nao_atualiza_postagem_de_outro_usuario(self):
         request = self.factory.put(f'/api/postagem/{self.postagem.pk}/', {

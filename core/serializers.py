@@ -26,10 +26,31 @@ class ConteudoSerializer(serializers.Serializer):
     corpo = serializers.CharField()
     link = serializers.URLField(required=False, allow_null=True, allow_blank=True)
     imagem = ImageFileOuString(required=False, allow_null=True)
+    cor_fundo = serializers.RegexField(
+        regex=r'^#(?:[0-9a-fA-F]{3}){1,2}$',
+        required=False,
+        allow_null=True,
+        max_length=7,
+        error_messages={
+            'invalid': "Campo 'cor_fundo' deve ser uma cor hexadecimal válida."
+        },
+    )
     publicado_em = serializers.SerializerMethodField()
     disponivel = serializers.BooleanField()
     usuario = UsuarioSerializer(required=False)
     tipo = serializers.ChoiceField(choices=["postagem", "noticia"], write_only=True)
+
+    def validate(self, attrs):
+        if (
+            attrs.get("tipo") == "postagem"
+            and attrs.get("cor_fundo")
+            and attrs.get("imagem")
+        ):
+            raise serializers.ValidationError(
+                "Informe apenas 'cor_fundo' ou 'imagem', não ambos."
+            )
+
+        return attrs
 
     def get_publicado_em(self, instance):
         publicado_em = getattr(instance, "publicado_em", None)
@@ -54,10 +75,10 @@ class ConteudoSerializer(serializers.Serializer):
 
         if tipo == "noticia":
             validated_data["sumario"] = validated_data.pop("corpo")
+            validated_data.pop("cor_fundo", None)
             return Noticia.objects.create(**validated_data)
         elif tipo == "postagem":
             validated_data.pop("link", None)
-            validated_data.pop("imagem", None)
             return Postagem.objects.create(**validated_data)
         else:
             raise ValueError("Tipo não identificado.")
